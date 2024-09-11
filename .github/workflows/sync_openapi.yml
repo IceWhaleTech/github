@@ -27,7 +27,7 @@ jobs:
         - name: Sync OpenAPI
           run: |
             rm -rf openapi/${{ inputs.project-name }}
-            cp -r code/cd  openapi/${{ inputs.project-name }}
+            cp -r code/api  openapi/${{ inputs.project-name }}
     
         - name: Commit and push changes
           uses: cpina/github-action-push-to-another-repository@main
