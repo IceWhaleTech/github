@@ -14,9 +14,12 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
+      - name: Configure Git and Go Private Modules
+        run: |
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
+          echo "GOPRIVATE=github.com/IceWhaleTech/*" >> $GITHUB_ENV
       - name: Get version
         id: get_version
-        #run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
       - name: Set version
         run: |
@@ -34,4 +37,4 @@ jobs:
       - run: npm run start
       - run: npm publish --access restricted
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN_PRIVATE}}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_PRIVATE }}
