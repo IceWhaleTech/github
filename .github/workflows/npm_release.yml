@@ -14,10 +14,11 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
-      - name: Configure Git and Go Private Modules
+      - name: Add Github Key
         run: |
-          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
-          echo "GOPRIVATE=github.com/IceWhaleTech/*" >> $GITHUB_ENV
+            export GO111MODULE=on
+            export GOPRIVATE=github.com/IceWhaleTech
+            git config --global url."https://${{ secrets.API_TOKEN_GITHUB }}@github.com".insteadOf "https://github.com"
       - name: Get version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
