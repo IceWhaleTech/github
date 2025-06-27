@@ -4,6 +4,8 @@ on:
     secrets:
       NPM_TOKEN_PRIVATE:
         required: true
+      API_TOKEN_GITHUB:
+        required: true
 
 jobs:
   publish-npm:
