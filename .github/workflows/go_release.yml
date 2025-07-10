@@ -8,6 +8,9 @@ on:
       file-name:
         required: true
         type: string
+      API_TOKEN_GITHUB:
+        required: true
+        type: string
     secrets:
       OSS_KEY_ID:
         required: true
