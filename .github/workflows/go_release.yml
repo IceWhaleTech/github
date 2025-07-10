@@ -27,6 +27,8 @@ on:
         required: false
       OneDrivePublic:
         required: false
+      API_TOKEN_GITHUB:
+        required: false
 
 jobs:
   goreleaser:
@@ -41,9 +43,14 @@ jobs:
             gcc-arm-linux-gnueabihf libc6-dev-armhf-cross \
             gcc-riscv64-linux-gnu libc6-dev-riscv64-cross
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Add Github Key
+        run: |
+            export GO111MODULE=on
+            export GOPRIVATE=github.com/IceWhaleTech
+            git config --global url."https://${{ secrets.API_TOKEN_GITHUB }}@github.com".insteadOf "https://github.com"
       - name: Update submodule
         run: git submodule update --init --recursive
       - name: Fetch all tags
