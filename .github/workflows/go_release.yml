@@ -8,9 +8,6 @@ on:
       file-name:
         required: true
         type: string
-      API_TOKEN_GITHUB:
-        required: true
-        type: string
     secrets:
       OSS_KEY_ID:
         required: true
@@ -31,7 +28,7 @@ on:
       OneDrivePublic:
         required: false
       API_TOKEN_GITHUB:
-        required: false
+        required: true
 
 jobs:
   goreleaser:
