@@ -7,13 +7,12 @@ on:
       API_TOKEN_GITHUB:
         required: true
 
-permissions:
-  id-token: write # Required for OIDC
-  contents: read
-
 jobs:
   publish-npm:
     runs-on: ubuntu-22.04
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
