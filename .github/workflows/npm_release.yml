@@ -2,17 +2,16 @@ name: npm Release
 on:
   workflow_call:
     secrets:
-      NPM_TOKEN_PRIVATE:
-        required: true
       API_TOKEN_GITHUB:
         required: true
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
 
 jobs:
   publish-npm:
     runs-on: ubuntu-22.04
-    permissions:
-      id-token: write # Required for OIDC
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,5 +52,3 @@ jobs:
               sleep 10
             }
           done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_PRIVATE }}
