@@ -47,7 +47,17 @@ jobs:
       - name: Retry npm publish on conflict
         run: |
           for i in {1..5}; do
-            npm publish --access restricted && break || {
+            if [[ "${{ steps.get_version.outputs.VERSION }}" == *-* ]]; then
+              npm publish --access restricted --tag next && break || {
+                echo "❗ Publish failed, retrying in 10s... ($i/5)"
+                sleep 10
+              }
+            else
+              npm publish --access restricted --tag latest && break || {
+                echo "❗ Publish failed, retrying in 10s... ($i/5)"
+                sleep 10
+              }
+            fi
               echo "❗ Publish failed, retrying in 10s... ($i/5)"
               sleep 10
             }
