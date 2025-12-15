@@ -42,21 +42,13 @@ jobs:
           npm install @openapitools/openapi-generator-cli -g
           openapi-generator-cli version-manager set 7.12.0
       - run: npm i
-      - run: npm ci
       - run: npm run start
-      - name: Retry npm publish on conflict
+      - name: npm publish
         run: |
-          for i in {1..5}; do
-            if [[ "${{ steps.get_version.outputs.VERSION }}" == *-* ]]; then
-              TAG=next
-            else
-              TAG=latest
-            fi
+          if [[ "${{ steps.get_version.outputs.VERSION }}" == *-* ]]; then
+            TAG=next
+          else
+            TAG=latest
+          fi
 
-            if npm publish --access restricted --tag "$TAG"; then
-              break
-            fi
-
-            echo "❗ Publish failed, retrying in 10s... ($i/5)"
-            sleep 10
-          done
+          npm publish --access restricted --tag "$TAG"
