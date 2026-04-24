@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload to oss
         id: upload_to_oss
-        uses: IceWhaleTech/upload-to-oss@v1.0.1
+        uses: IceWhaleTech/oss-action@v1.0.1
         with:
           key-id: ${{ secrets.OSS_KEY_ID }}
           key-secret: ${{ secrets.OSS_KEY_SECRET }}
