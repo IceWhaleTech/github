@@ -20,15 +20,16 @@ jobs:
               git config --global url."https://${{ secrets.API_TOKEN_GITHUB }}@github.com".insteadOf "https://github.com"
 
         - name: Checkout
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
           with:
             path: code
       
         - name: Checkout OpenAPI repo
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
           with:
             repository: IceWhaleTech/IceWhale-OpenAPI
             path: openapi
+            token: ${{ secrets.API_TOKEN_GITHUB }}
 
         - name: Sync OpenAPI
           run: |
