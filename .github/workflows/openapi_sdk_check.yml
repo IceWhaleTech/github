@@ -1,0 +1,69 @@
+name: OpenAPI SDK Check
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to the Builder configuration in the caller repository
+        required: false
+        type: string
+        default: openapi-sdk.yaml
+      checkout-submodules:
+        description: Recursively check out Git submodules before running the Builder
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      API_TOKEN_GITHUB:
+        description: Optional token for checking out private Git submodules
+        required: false
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  OPENAPI_SDK_BUILDER_IMAGE: ghcr.io/icewhaletech/openapi-sdk-builder:0.1.0
+
+jobs:
+  check:
+    name: Validate and compile SDK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.API_TOKEN_GITHUB || github.token }}
+          submodules: ${{ inputs.checkout-submodules && 'recursive' || 'false' }}
+          persist-credentials: false
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Pull SDK Builder
+        run: docker pull "$OPENAPI_SDK_BUILDER_IMAGE"
+
+      - name: Check generated SDK
+        shell: bash
+        env:
+          CONFIG_PATH: ${{ inputs.config-path }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --pull never \
+            --read-only \
+            --network none \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            "$OPENAPI_SDK_BUILDER_IMAGE" \
+            check \
+            --project-dir /workspace \
+            --config "$CONFIG_PATH"
