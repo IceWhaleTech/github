@@ -36,7 +36,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: IceWhaleTech/github/.github/workflows/openapi_sdk_check.yml@main
+    uses: IceWhaleTech/github/.github/workflows/openapi_sdk_check.yml@openapi-sdk-v1.0.1
     with:
       config-path: openapi-sdk.yaml
 ```
@@ -68,7 +68,7 @@ jobs:
       contents: read
       packages: read
       id-token: write
-    uses: IceWhaleTech/github/.github/workflows/openapi_sdk_release.yml@main
+    uses: IceWhaleTech/github/.github/workflows/openapi_sdk_release.yml@openapi-sdk-v1.0.1
     with:
       config-path: openapi-sdk.yaml
       version: ${{ inputs.version || github.ref_name }}
@@ -88,5 +88,5 @@ existing `API_TOKEN_GITHUB` secret:
       API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
 ```
 
-For production callers, prefer a release tag or full commit SHA instead of
-`@main` after the workflow interface is validated.
+Callers should pin these workflows to a release tag such as
+`@openapi-sdk-v1.0.1` (or a full commit SHA), rather than `@main`.
