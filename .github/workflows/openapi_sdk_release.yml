@@ -1,0 +1,139 @@
+name: OpenAPI SDK Release
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to the Builder configuration in the caller repository
+        required: false
+        type: string
+        default: openapi-sdk.yaml
+      version:
+        description: npm package version; defaults to the caller ref name
+        required: false
+        type: string
+        default: ""
+      npm-tag:
+        description: npm distribution tag
+        required: false
+        type: string
+        default: latest
+      checkout-submodules:
+        description: Recursively check out Git submodules before running the Builder
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      API_TOKEN_GITHUB:
+        description: Optional token for checking out private Git submodules
+        required: false
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+env:
+  OPENAPI_SDK_BUILDER_IMAGE: ghcr.io/icewhaletech/openapi-sdk-builder:0.1.0
+
+jobs:
+  publish:
+    name: Build and publish SDK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.API_TOKEN_GITHUB || github.token }}
+          submodules: ${{ inputs.checkout-submodules && 'recursive' || 'false' }}
+          persist-credentials: false
+
+      - name: Resolve release inputs
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_NPM_TAG: ${{ inputs.npm-tag }}
+        run: |
+          set -euo pipefail
+
+          version="$REQUESTED_VERSION"
+          if [[ -z "$version" ]]; then
+            version="$GITHUB_REF_NAME"
+          fi
+          if [[ ! "$version" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "::error::Version is not valid semver: $version"
+            exit 1
+          fi
+          if [[ ! "$REQUESTED_NPM_TAG" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
+            echo "::error::Invalid npm distribution tag: $REQUESTED_NPM_TAG"
+            exit 1
+          fi
+
+          {
+            echo "SDK_VERSION=$version"
+            echo "NPM_TAG=$REQUESTED_NPM_TAG"
+            echo "ARTIFACT_DIR=$RUNNER_TEMP/openapi-sdk-artifacts"
+          } >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Pull SDK Builder
+        run: docker pull "$OPENAPI_SDK_BUILDER_IMAGE"
+
+      - name: Build SDK package
+        shell: bash
+        env:
+          CONFIG_PATH: ${{ inputs.config-path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$ARTIFACT_DIR"
+          docker run --rm \
+            --pull never \
+            --read-only \
+            --network none \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --volume "$ARTIFACT_DIR:/artifacts:rw" \
+            "$OPENAPI_SDK_BUILDER_IMAGE" \
+            build \
+            --project-dir /workspace \
+            --config "$CONFIG_PATH" \
+            --version "$SDK_VERSION" \
+            --output-dir /artifacts
+
+      - name: Upload SDK package
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-sdk-${{ env.SDK_VERSION }}
+          path: ${{ env.ARTIFACT_DIR }}/*.tgz
+          if-no-files-found: error
+
+      - name: Set up Node.js for trusted publishing
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+
+      - name: Install trusted-publishing npm version
+        run: npm install --global npm@11.5.1
+
+      - name: Publish SDK package
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          artifacts=("$ARTIFACT_DIR"/*.tgz)
+          if [[ ${#artifacts[@]} -ne 1 ]]; then
+            echo "::error::Expected exactly one SDK package, found ${#artifacts[@]}"
+            exit 1
+          fi
+          npm publish "${artifacts[0]}" --ignore-scripts --tag "$NPM_TAG"
