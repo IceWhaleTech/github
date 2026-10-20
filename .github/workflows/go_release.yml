@@ -33,6 +33,8 @@ on:
 jobs:
   goreleaser:
     runs-on: ubuntu-22.04
+    env:
+      GOPRIVATE: github.com/IceWhaleTech
     steps:
       - name: Install dependencies for cross-compiling
         run: |
@@ -49,7 +51,6 @@ jobs:
       - name: Add Github Key
         run: |
             export GO111MODULE=on
-            export GOPRIVATE=github.com/IceWhaleTech
             git config --global url."https://${{ secrets.API_TOKEN_GITHUB }}@github.com".insteadOf "https://github.com"
       - name: Update submodule
         run: git submodule update --init --recursive
