@@ -95,7 +95,7 @@ jobs:
 
         assert source.count(marker) == 1
 
-        stop = "    - sh -c ''touch \"$RUNNER_TEMP/auth-probe-complete\"; exit 42''\n"
+        stop = ''    - sh -c \''touch "$RUNNER_TEMP/auth-probe-complete"; exit 42\''\n''
 
         probe = source.replace(marker, marker + stop, 1)
 
