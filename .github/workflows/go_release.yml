@@ -1,5 +1,5 @@
 name: Release Version
-on:
+'on':
   workflow_call:
     inputs:
       project-name:
@@ -23,80 +23,89 @@ on:
         required: false
       OneDriveID:
         required: false
-      OneDriveSecret: 
+      OneDriveSecret:
         required: false
       OneDrivePublic:
         required: false
       API_TOKEN_GITHUB:
         required: true
-
 jobs:
   goreleaser:
     runs-on: ubuntu-22.04
     env:
       GOPRIVATE: github.com/IceWhaleTech
     steps:
-      - name: Install dependencies for cross-compiling
-        run: |
-          sudo apt update || true 
-          sudo apt-get --no-install-recommends --yes install \
-            upx libc6-dev-amd64-cross \
-            gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
-            gcc-arm-linux-gnueabihf libc6-dev-armhf-cross \
-            gcc-riscv64-linux-gnu libc6-dev-riscv64-cross
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Add Github Key
-        run: |
-            export GO111MODULE=on
-            git config --global url."https://${{ secrets.API_TOKEN_GITHUB }}@github.com".insteadOf "https://github.com"
-      - name: Update submodule
-        run: git submodule update --init --recursive
-      - name: Fetch all tags
-        run: git fetch --force --tags
+    - name: Install dependencies for cross-compiling
+      run: "sudo apt update || true \nsudo apt-get --no-install-recommends --yes install\
+        \ \\\n  upx libc6-dev-amd64-cross \\\n  gcc-aarch64-linux-gnu libc6-dev-arm64-cross\
+        \ \\\n  gcc-arm-linux-gnueabihf libc6-dev-armhf-cross \\\n  gcc-riscv64-linux-gnu\
+        \ libc6-dev-riscv64-cross\n"
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: v1.8.1-alpha2
+        persist-credentials: ${{ matrix.persist }}
+    - name: Add Github Key
+      run: 'export GO111MODULE=on
 
-      - name: Get version
-        id: get_version
-        # run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-        run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache-dependency-path: |
-            go.sum
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
-        with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
-          distribution: goreleaser
-          version: latest
-          args: --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GoogleID: ${{ secrets.GoogleID }} 
-          GoogleSecret: ${{ secrets.GoogleSecret }}
-          DropboxKey: ${{ secrets.DropboxKey }}
-          DropboxSecret: ${{ secrets.DropboxSecret }}
-          OneDriveID: ${{ secrets.OneDriveID }}
-          OneDriveSecret: ${{ secrets.OneDriveSecret }}
-          OneDrivePublic: ${{ secrets.OneDrivePublic }}
-          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+        git config --global url."https://${{ secrets.API_TOKEN_GITHUB }}@github.com".insteadOf
+        "https://github.com"
 
-      - name: Upload to oss
-        id: upload_to_oss
-        uses: IceWhaleTech/oss-action@v1.0.4
-        with:
-          key-id: ${{ secrets.OSS_KEY_ID }}
-          key-secret: ${{ secrets.OSS_KEY_SECRET }}
-          region: oss-cn-shanghai
-          bucket: casaos
-          assets: |
-            dist/checksums.txt:/IceWhaleTech/${{inputs.project-name}}/releases/download/${{ steps.get_version.outputs.VERSION }}/checksums.txt
-            dist/linux-arm-7-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz:/IceWhaleTech/${{inputs.project-name}}/releases/download/${{ steps.get_version.outputs.VERSION }}/linux-arm-7-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz
-            dist/linux-arm64-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz:/IceWhaleTech/${{inputs.project-name}}/releases/download/${{ steps.get_version.outputs.VERSION }}/linux-arm64-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz
-            dist/linux-amd64-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz:/IceWhaleTech/${{inputs.project-name}}/releases/download/${{ steps.get_version.outputs.VERSION }}/linux-amd64-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz
-            dist/linux-riscv64-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz:/IceWhaleTech/${{inputs.project-name}}/releases/download/${{ steps.get_version.outputs.VERSION }}/linux-riscv64-${{inputs.file-name}}-${{ steps.get_version.outputs.VERSION }}.tar.gz
+        '
+      if: matrix.mode == 'existing-expression'
+    - name: Configure token through environment
+      if: matrix.mode == 'token-environment'
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      run: 'git config --global url."https://${API_TOKEN_GITHUB}@github.com".insteadOf
+        "https://github.com"
+
+        '
+    - name: Configure explicit token authentication
+      if: matrix.mode == 'explicit-token-authentication'
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      run: 'git config --global url."https://x-access-token:${API_TOKEN_GITHUB}@github.com/".insteadOf
+        "https://github.com/"
+
+        '
+    - name: Update submodule
+      run: git submodule update --init --recursive
+    - name: Fetch all tags
+      run: git fetch --force --tags
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25'
+        cache-dependency-path: 'go.sum
+
+          '
+        cache: false
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v4
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --clean --skip=publish,announce --parallelism 2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GoogleID: ${{ secrets.GoogleID }}
+        GoogleSecret: ${{ secrets.GoogleSecret }}
+        DropboxKey: ${{ secrets.DropboxKey }}
+        DropboxSecret: ${{ secrets.DropboxSecret }}
+        OneDriveID: ${{ secrets.OneDriveID }}
+        OneDriveSecret: ${{ secrets.OneDriveSecret }}
+        OneDrivePublic: ${{ secrets.OneDrivePublic }}
+        GORELEASER_CURRENT_TAG: v1.8.1-alpha2
+    name: ${{ matrix.mode }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - mode: existing-expression
+          persist: true
+        - mode: token-environment
+          persist: true
+        - mode: explicit-token-authentication
+          persist: false
