@@ -82,12 +82,35 @@ jobs:
 
           '
         cache: false
-    - name: Run GoReleaser
+    - name: Prepare a publish-safe release probe
+      run: 'python3 - <<''PYPROBE''
+
+        from pathlib import Path
+
+        import os
+
+        source = Path(''.goreleaser.yaml'').read_text()
+
+        marker = ''    - go mod tidy\n''
+
+        assert source.count(marker) == 1
+
+        stop = "    - sh -c ''touch \"$RUNNER_TEMP/auth-probe-complete\"; exit 42''\n"
+
+        probe = source.replace(marker, marker + stop, 1)
+
+        (Path(os.environ[''RUNNER_TEMP'']) / ''auth-probe.yml'').write_text(probe)
+
+        PYPROBE
+
+        '
+    - name: Install GoReleaser
       uses: goreleaser/goreleaser-action@v4
       with:
         distribution: goreleaser
         version: latest
-        args: release --clean --skip=publish,announce --parallelism 2
+        install-only: true
+    - name: Run real release preflight and dependency hooks
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GoogleID: ${{ secrets.GoogleID }}
@@ -98,6 +121,25 @@ jobs:
         OneDriveSecret: ${{ secrets.OneDriveSecret }}
         OneDrivePublic: ${{ secrets.OneDrivePublic }}
         GORELEASER_CURRENT_TAG: v1.8.1-alpha2
+      run: 'set +e
+
+        goreleaser release --clean --config "$RUNNER_TEMP/auth-probe.yml" > "$RUNNER_TEMP/release-auth-probe.log"
+        2>&1
+
+        auth_probe_status=$?
+
+        set -e
+
+        cat "$RUNNER_TEMP/release-auth-probe.log"
+
+        test "$auth_probe_status" -ne 0
+
+        test -f "$RUNNER_TEMP/auth-probe-complete"
+
+        echo "Release preflight and dependency hooks completed; publishing was stopped
+        deliberately."
+
+        '
     name: ${{ matrix.mode }}
     strategy:
       fail-fast: false
