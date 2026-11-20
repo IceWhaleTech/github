@@ -1,0 +1,64 @@
+name: Publish RAW artifact to e2e
+on:
+  workflow_call:
+    inputs:
+      platform-url:
+        type: string
+        default: ''
+        description: Platform URL; defaults to caller vars.E2E_PLATFORM_URL
+      package-url:
+        type: string
+        required: true
+      sha256:
+        type: string
+        required: true
+      source-commit:
+        type: string
+        required: true
+        description: Actual commit used to build this package
+      source-ref:
+        type: string
+        default: ''
+      filename:
+        type: string
+        default: ''
+      expected-version:
+        type: string
+        default: ''
+      runs-on:
+        type: string
+        default: '["ubuntu-latest"]'
+        description: JSON runner labels; caller provides network reachability
+    secrets:
+      E2E_RAW_PUBLISH_TOKEN:
+        required: true
+    outputs:
+      task-id:
+        value: ${{ jobs.publish.outputs.task-id }}
+      artifact-id:
+        value: ${{ jobs.publish.outputs.artifact-id }}
+      artifact-url:
+        value: ${{ jobs.publish.outputs.artifact-url }}
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    timeout-minutes: 35
+    outputs:
+      task-id: ${{ steps.publish.outputs.task-id }}
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
+      artifact-url: ${{ steps.publish.outputs.artifact-url }}
+    steps:
+      - name: Import and verify RAW package
+        id: publish
+        uses: IceWhaleTech/github/actions/publish-raw@raw-publish-v1.0.0
+        with:
+          platform-url: ${{ inputs.platform-url || vars.E2E_PLATFORM_URL }}
+          publish-token: ${{ secrets.E2E_RAW_PUBLISH_TOKEN }}
+          package-url: ${{ inputs.package-url }}
+          sha256: ${{ inputs.sha256 }}
+          source-commit: ${{ inputs.source-commit }}
+          source-ref: ${{ inputs.source-ref }}
+          filename: ${{ inputs.filename }}
+          expected-version: ${{ inputs.expected-version }}
