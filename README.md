@@ -117,8 +117,43 @@ Add this step at the end of the job that builds the RAW file:
     # expected-version: 1.2.3 (optional exact package version assertion)
 ```
 
-No Actions artifact upload is needed. Alternatively, publish an existing HTTP(S)
-download URL with the URL-only reusable workflow:
+Choose one transport; both are supported by `raw-publish-v1.0.0`:
+
+| Input | Package transfer | Checksum |
+| --- | --- | --- |
+| `package-path` | The GitHub runner streams its local RAW file to e2e | Computed from the local file |
+| `package-url` | The runner sends metadata; e2e downloads the URL itself | Supply the RAW file SHA-256 |
+
+### Submit a download URL from the current job
+
+The same composite Action accepts a URL instead of a local path. The example
+expects the build/release steps to set `RAW_PACKAGE_URL` and `RAW_SHA256`:
+
+```yaml
+- name: Import published RAW download URL
+  id: e2e
+  uses: IceWhaleTech/github/actions/publish-raw@raw-publish-v1.0.0
+  with:
+    platform-url: ${{ vars.E2E_PLATFORM_URL }}
+    publish-token: ${{ secrets.E2E_RAW_PUBLISH_TOKEN }}
+    package-url: ${{ env.RAW_PACKAGE_URL }}
+    sha256: ${{ env.RAW_SHA256 }}
+    filename: folio.raw
+    source-commit: ${{ github.sha }} # Must identify the actual built commit
+```
+
+Omit `package-path` in URL mode. The URL may point to an existing GitHub Release,
+object store or other HTTP(S) download endpoint that e2e can access. RAW bytes do
+not pass through this Action. e2e downloads to a temporary file, verifies the
+checksum and package metadata, writes the package to its configured artifact
+storage (typically local RustFS), and reads it back to verify the stored bytes.
+The Action waits for that process to finish. Later downloads/deployments use the
+managed copy; a saved source URL alone is not considered an imported artifact.
+
+### Submit a URL from a separate reusable-workflow job
+
+No Actions artifact upload is needed. A caller with a build job that outputs the
+URL and checksum can instead use the URL-only reusable workflow:
 
 ```yaml
 jobs:
