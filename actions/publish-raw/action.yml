@@ -1,0 +1,67 @@
+name: Publish RAW to e2e
+description: Import a verified RAW application package and preserve its GitHub build provenance
+inputs:
+  platform-url:
+    description: e2e platform base URL; normally vars.E2E_PLATFORM_URL
+    required: true
+  publish-token:
+    description: Repository-scoped RAW publisher secret
+    required: true
+  package-path:
+    description: Local RAW path; mutually exclusive with package-url
+    default: ''
+  package-url:
+    description: Download URL; mutually exclusive with package-path
+    default: ''
+  sha256:
+    description: Required for URL publication; local files are hashed automatically
+    default: ''
+  filename:
+    description: Original RAW filename; defaults to path or URL basename
+    default: ''
+  expected-version:
+    description: Optional exact package version assertion; git refs are recorded separately
+    default: ''
+  source-commit:
+    description: Actual built commit; local file defaults to checked-out HEAD
+    default: ''
+  source-ref:
+    description: Full built ref; defaults to github.ref
+    default: ''
+  wait-timeout:
+    description: Seconds to wait for verified import
+    default: '1800'
+  poll-interval:
+    description: Seconds between task status requests
+    default: '5'
+outputs:
+  task-id:
+    description: Platform import task ID
+    value: ${{ steps.publish.outputs.task-id }}
+  artifact-id:
+    description: Verified immutable artifact SHA-256
+    value: ${{ steps.publish.outputs.artifact-id }}
+  artifact-url:
+    description: Platform artifact details URL
+    value: ${{ steps.publish.outputs.artifact-url }}
+  sha256:
+    description: Requested package SHA-256
+    value: ${{ steps.publish.outputs.sha256 }}
+runs:
+  using: composite
+  steps:
+    - id: publish
+      shell: bash
+      env:
+        INPUT_PLATFORM_URL: ${{ inputs.platform-url }}
+        INPUT_PUBLISH_TOKEN: ${{ inputs.publish-token }}
+        INPUT_PACKAGE_PATH: ${{ inputs.package-path }}
+        INPUT_PACKAGE_URL: ${{ inputs.package-url }}
+        INPUT_SHA256: ${{ inputs.sha256 }}
+        INPUT_FILENAME: ${{ inputs.filename }}
+        INPUT_EXPECTED_VERSION: ${{ inputs.expected-version }}
+        INPUT_SOURCE_COMMIT: ${{ inputs.source-commit }}
+        INPUT_SOURCE_REF: ${{ inputs.source-ref }}
+        INPUT_WAIT_TIMEOUT: ${{ inputs.wait-timeout }}
+        INPUT_POLL_INTERVAL: ${{ inputs.poll-interval }}
+      run: python3 "$GITHUB_ACTION_PATH/publish.py"
